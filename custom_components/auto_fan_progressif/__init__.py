@@ -1,57 +1,71 @@
 """Auto Fan Progressif.
 
-Minimal external integration skeleton for Versatile Thermostat.
-The progressive selection logic lives in progressive_fan.py.
-
-This file is intentionally conservative: it exposes the package structure and
-leaves the VTherm event wiring to the next implementation step.
+External integration for Versatile Thermostat using vtherm_api.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+from collections.abc import Any, Callable
 
-from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from vtherm_api import VThermAPI
+
+from .const import (
+    CONF_AUTO_APPLY_ON_HVAC_MODE,
+    CONF_CLIMATE_ENTITY_ID,
+    CONF_FAN_MODE_ORDER,
+    CONF_VTHERM_ENTITY_ID,
+    DOMAIN,
+)
+from .fan_controller import AutoFanProgressifPlugin
 
 PLATFORMS: list[str] = []
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
-    """Set up the integration from YAML (unused placeholder)."""
-
     hass.data.setdefault(DOMAIN, {})
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up an entry.
-
-    The next step is to connect a VTherm-linked climate helper here.
-    """
-
     hass.data.setdefault(DOMAIN, {})
+
+    api = VThermAPI.get_vtherm_api(hass)
+    if api is None:
+        return False
+
+    vtherm_entity_id = str(entry.data[CONF_VTHERM_ENTITY_ID])
+    climate_entity_id = str(entry.data[CONF_CLIMATE_ENTITY_ID])
+    fan_mode_order = entry.data.get(CONF_FAN_MODE_ORDER, [])
+
+    plugin = AutoFanProgressifPlugin(hass, climate_entity_id, fan_mode_order)
+    vtherm = _get_climate_entity(hass, vtherm_entity_id)
+    if vtherm is None:
+        return False
+
+    plugin.link_to_vtherm(vtherm)
+
     hass.data[DOMAIN][entry.entry_id] = {
         "entry": entry,
-        "controller_factory": _build_controller_factory,
+        "api": api,
+        "plugin": plugin,
+        CONF_AUTO_APPLY_ON_HVAC_MODE: bool(entry.data.get(CONF_AUTO_APPLY_ON_HVAC_MODE, True)),
     }
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload an entry."""
-
-    hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
+    stored = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
+    plugin = stored.get("plugin") if stored else None
+    if plugin is not None:
+        plugin.remove_listeners()
     return True
 
 
-def _build_controller_factory() -> Callable[..., Any]:
-    """Return a placeholder factory for the next implementation step."""
-
-    def _factory(*args: Any, **kwargs: Any) -> dict[str, Any]:
-        return {"args": args, "kwargs": kwargs}
-
-    return _factory
+def _get_climate_entity(hass: HomeAssistant, entity_id: str) -> Any | None:
+    component = hass.data.get("climate")
+    if component is None:
+        return None
+    return component.get_entity(entity_id)

@@ -1,0 +1,19 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Auto Fan Progressif",
+        "description": "Link one VTherm and one underlying climate to drive the fan progressively.",
+        "data": {
+          "vtherm_entity_id": "VTherm entity",
+          "climate_entity_id": "Underlying climate entity",
+          "fan_mode_order": "fan_modes order (comma separated)",
+          "auto_apply_on_hvac_mode": "Re-apply on HVAC/preset changes"
+        }
+      }
+    },
+    "error": {
+      "missing_entity": "Both entities are required."
+    }
+  }
+}
