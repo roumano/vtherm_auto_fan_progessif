@@ -7,6 +7,7 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
@@ -24,6 +25,26 @@ class AutoFanProgressifConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input: Mapping[str, Any] | None = None) -> FlowResult:
+        """Handle the initial user step."""
+        return await self._async_step_common(user_input=user_input, step_id="user")
+
+    async def async_step_reconfigure(self, user_input: Mapping[str, Any] | None = None) -> FlowResult:
+        """Handle reconfiguration from the helper UI."""
+        return await self._async_step_common(user_input=user_input, step_id="reconfigure", reconfigure=True)
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> "AutoFanProgressifOptionsFlowHandler":
+        """Return the options flow handler."""
+        return AutoFanProgressifOptionsFlowHandler(config_entry)
+
+    async def _async_step_common(
+        self,
+        *,
+        user_input: Mapping[str, Any] | None,
+        step_id: str,
+        reconfigure: bool = False,
+    ) -> FlowResult:
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -34,16 +55,23 @@ class AutoFanProgressifConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not vtherm_entity_id or not climate_entity_id:
                 errors["base"] = "missing_entity"
             else:
+                data = {
+                    CONF_VTHERM_ENTITY_ID: vtherm_entity_id,
+                    CONF_CLIMATE_ENTITY_ID: climate_entity_id,
+                    CONF_FAN_MODE_ORDER: fan_mode_order,
+                }
+                if reconfigure:
+                    return self.async_update_reload_and_abort(
+                        self._get_reconfigure_entry(),
+                        data_updates=data,
+                    )
+
                 return self.async_create_entry(
                     title=f"Auto Fan Progressif - {vtherm_entity_id}",
-                    data={
-                        CONF_VTHERM_ENTITY_ID: vtherm_entity_id,
-                        CONF_CLIMATE_ENTITY_ID: climate_entity_id,
-                        CONF_FAN_MODE_ORDER: fan_mode_order,
-                    },
+                    data=data,
                 )
 
-        return self._show_form(errors=errors)
+        return self._show_form(errors=errors, fan_mode_order=None, step_id=step_id)
 
     @staticmethod
     def _schema(
@@ -63,19 +91,35 @@ class AutoFanProgressifConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
 
-    def _show_form(self, *, errors: dict[str, str], fan_mode_order: str | None = None) -> FlowResult:
+    def _show_form(
+        self,
+        *,
+        errors: dict[str, str],
+        fan_mode_order: str | None = None,
+        step_id: str,
+    ) -> FlowResult:
+        current_vtherm = ""
+        current_climate = ""
+
+        if getattr(self, "config_entry", None) is not None:
+            current_vtherm = str(self.config_entry.data.get(CONF_VTHERM_ENTITY_ID, "")).strip()
+            current_climate = str(self.config_entry.data.get(CONF_CLIMATE_ENTITY_ID, "")).strip()
+            current_order = self.config_entry.options.get(
+                CONF_FAN_MODE_ORDER,
+                self.config_entry.data.get(CONF_FAN_MODE_ORDER, DEFAULT_FAN_MODE_ORDER),
+            )
+            if fan_mode_order is None:
+                fan_mode_order = ", ".join(current_order) if isinstance(current_order, list) else str(current_order)
+
         return self.async_show_form(
-            step_id="user",
-            data_schema=self._schema(fan_mode_order=fan_mode_order),
+            step_id=step_id,
+            data_schema=self._schema(
+                vtherm_entity_id=current_vtherm,
+                climate_entity_id=current_climate,
+                fan_mode_order=fan_mode_order,
+            ),
             errors=errors,
         )
-
-
-
-def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> "AutoFanProgressifOptionsFlowHandler":
-    """Return the options flow handler."""
-
-    return AutoFanProgressifOptionsFlowHandler(config_entry)
 
 
 class AutoFanProgressifOptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
