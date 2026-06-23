@@ -100,7 +100,7 @@ class AutoFanProgressifPlugin(PluginClimate):
             self._climate_entity_id,
             event.event_type,
         )
-        self._hass.async_create_task(self.async_apply_now(reason=event.event_type))
+        self._hass.add_job(self.async_apply_now, reason=event.event_type)
 
     async def async_apply_now(self, reason: str | None = None, context: Context | None = None) -> str | None:
         """Evaluate current data and push the best fan mode to the climate."""

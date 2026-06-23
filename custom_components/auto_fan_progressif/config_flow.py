@@ -70,16 +70,16 @@ class AutoFanProgressifConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    @staticmethod
-    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> "AutoFanProgressifOptionsFlowHandler":
-        return AutoFanProgressifOptionsFlowHandler(config_entry)
 
 
-class AutoFanProgressifOptionsFlowHandler(config_entries.OptionsFlow):
+def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> "AutoFanProgressifOptionsFlowHandler":
+    """Return the options flow handler."""
+
+    return AutoFanProgressifOptionsFlowHandler(config_entry)
+
+
+class AutoFanProgressifOptionsFlowHandler(config_entries.OptionsFlowWithConfigEntry):
     """Options flow for the integration."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
 
     async def async_step_init(self, user_input: Mapping[str, Any] | None = None) -> FlowResult:
         errors: dict[str, str] = {}
