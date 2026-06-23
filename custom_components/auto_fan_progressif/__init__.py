@@ -73,15 +73,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload the config entry and remove listeners."""
+def _cleanup_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove runtime objects registered for an entry."""
 
     stored = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
     plugin = stored.get("plugin") if stored else None
     if plugin is not None:
-        _LOGGER.info("Unloading %s for entry=%s", DOMAIN, entry.entry_id)
+        _LOGGER.info("Cleaning up %s for entry=%s", DOMAIN, entry.entry_id)
         plugin.remove_listeners()
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload the config entry and remove listeners."""
+
+    _cleanup_entry(hass, entry)
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle entry removal from Home Assistant."""
+
+    _LOGGER.info("Removing %s for entry=%s", DOMAIN, entry.entry_id)
+    _cleanup_entry(hass, entry)
 
 
 def _get_climate_entity(hass: HomeAssistant, entity_id: str) -> Any | None:

@@ -1,12 +1,18 @@
 {
   "domain": "auto_fan_progressif",
   "name": "Auto Fan Progressif",
-  "version": "0.2.0",
-  "documentation": "https://github.com/your-repo/auto_fan_progressif",
-  "issue_tracker": "https://github.com/your-repo/auto_fan_progressif/issues",
-  "codeowners": ["@your-handle"],
-  "requirements": ["vtherm_api>=0.2.0"],
-  "dependencies": ["versatile_thermostat"],
+  "version": "0.2.1",
+  "documentation": "https://github.com/roumano/vtherm_auto_fan_progessif/",
+  "issue_tracker": "https://github.com/roumano/vtherm_auto_fan_progessif/issues",
+  "codeowners": [
+    "roumano@gmail.com"
+  ],
+  "requirements": [
+    "vtherm_api>=0.2.0"
+  ],
+  "dependencies": [
+    "versatile_thermostat"
+  ],
   "config_flow": true,
   "iot_class": "local_push",
   "integration_type": "helper"
