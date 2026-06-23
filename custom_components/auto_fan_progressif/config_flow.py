@@ -18,7 +18,7 @@ from .const import (
     DOMAIN,
 )
 
-+@config_entries.HANDLERS.register(DOMAIN)
+@config_entries.HANDLERS.register(DOMAIN)
 class AutoFanProgressifConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for this integration."""
 
