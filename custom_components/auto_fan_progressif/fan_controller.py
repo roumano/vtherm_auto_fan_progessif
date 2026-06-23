@@ -119,6 +119,15 @@ class AutoFanProgressifPlugin(PluginClimate):
             self._last_applied_mode = None
 
         snapshot = self._build_snapshot()
+
+        current_fan_mode = (snapshot.fan_mode or "").lower().strip()
+        if current_fan_mode != "auto":
+            _LOGGER.debug(
+                "Skipping auto-fan for %s: fan_mode=%s (expected auto)",
+                self._climate_entity_id,
+                current_fan_mode or None,
+            )
+            return None
         _LOGGER.debug(
             "Auto-fan snapshot for %s (reason=%s): current=%s target=%s hvac=%s fan_mode=%s fan_modes=%s",
             self._climate_entity_id,
@@ -162,7 +171,7 @@ class AutoFanProgressifPlugin(PluginClimate):
             _LOGGER.debug("Skipping auto-fan for %s: no mode selected", self._climate_entity_id)
             return None
 
-        current_mode = snapshot.fan_mode.lower().strip() if snapshot.fan_mode else None
+        current_mode = current_fan_mode
         band = delta_band(decision.delta)
 
         _LOGGER.debug(
