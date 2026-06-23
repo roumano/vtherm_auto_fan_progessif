@@ -106,6 +106,14 @@ class AutoFanProgressifPlugin(PluginClimate):
 
     async def async_apply_now(self, reason: str | None = None, context: Context | None = None) -> str | None:
         """Evaluate current data and push the best fan mode to the climate."""
+        current_fan_mode = self._climate.fan_mode
+        if current_fan_mode != "auto":
+            _LOGGER.debug(
+                "Skip auto-fan for %s: fan_mode=%s (expected auto)",
+                self._climate.entity_id,
+                current_fan_mode,
+            )
+            self._last_applied_mode = None
 
         snapshot = self._build_snapshot()
         _LOGGER.debug(
