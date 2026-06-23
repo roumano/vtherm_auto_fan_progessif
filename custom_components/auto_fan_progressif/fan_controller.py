@@ -13,7 +13,7 @@ from homeassistant.helpers.event import async_track_state_change_event
 
 from vtherm_api import PluginClimate
 
-from .const import CONF_CLIMATE_ENTITY_ID, CONF_FAN_MODE_ORDER
+from .const import DEFAULT_FAN_MODE_ORDER
 from .progressive_fan import choose_fan_mode, delta_band
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,7 +35,6 @@ class AutoFanProgressifPlugin(PluginClimate):
         super().__init__(hass)
         self._climate_entity_id = climate_entity_id
         self._fan_mode_order = list(fan_mode_order or [])
-        self._last_applied_mode: str | None = None
         self._climate_listener_remove = None
         _LOGGER.debug(
             "AutoFanProgressifPlugin created for climate=%s preferred_order=%s",
@@ -128,11 +127,22 @@ class AutoFanProgressifPlugin(PluginClimate):
             _LOGGER.debug("Skipping auto-fan for %s: no fan_modes attribute available", self._climate_entity_id)
             return None
 
+        preferred_order = self._fan_mode_order or list(DEFAULT_FAN_MODE_ORDER)
+        preferred_set = set(preferred_order)
+        ignored_modes = [mode for mode in snapshot.fan_modes if mode not in preferred_set]
+        if ignored_modes:
+            _LOGGER.debug(
+                "Ignoring unsupported or non-ordered fan modes for %s: %s (preferred_order=%s)",
+                self._climate_entity_id,
+                ignored_modes,
+                preferred_order,
+            )
+
         decision = choose_fan_mode(
             snapshot.current_temperature,
             snapshot.target_temperature,
             snapshot.fan_modes,
-            self._fan_mode_order or None,
+            preferred_order,
         )
         selected_mode = decision.selected_mode
         if selected_mode is None:
@@ -154,11 +164,7 @@ class AutoFanProgressifPlugin(PluginClimate):
         )
 
         if current_mode == selected_mode:
-            self._last_applied_mode = selected_mode
             _LOGGER.debug("No change for %s: already on fan mode %s", self._climate_entity_id, selected_mode)
-            return selected_mode
-
-        if self._last_applied_mode == selected_mode and current_mode == selected_mode:
             return selected_mode
 
         _LOGGER.info(
@@ -188,7 +194,6 @@ class AutoFanProgressifPlugin(PluginClimate):
             )
             raise
 
-        self._last_applied_mode = selected_mode
         return selected_mode
 
     def _build_snapshot(self) -> FanModeSnapshot:
@@ -212,8 +217,6 @@ class AutoFanProgressifPlugin(PluginClimate):
 
 def _as_float(value: Any) -> float | None:
     try:
-        if value is None:
-            return None
-        return float(value)
+        return None if value is None else float(value)
     except (TypeError, ValueError):
         return None

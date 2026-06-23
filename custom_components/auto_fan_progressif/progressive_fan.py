@@ -38,9 +38,9 @@ def normalize_supported_modes(
 ) -> list[str]:
     """Return fan modes ordered from quietest to strongest.
 
-    The climate entity may expose custom fan modes. The safest default is to
-    let the user provide a preferred order. If not provided, we fall back to a
-    common quiet -> strong progression.
+    Only the modes explicitly listed in preferred_order are used.
+    Any other supported modes are ignored on purpose, so the plugin
+    never falls back to an unexpected mode such as ``auto``.
     """
 
     supported = _dedupe_preserve_order(fan_modes or [])
@@ -49,9 +49,8 @@ def normalize_supported_modes(
 
     order = _dedupe_preserve_order(preferred_order or DEFAULT_FAN_MODE_ORDER)
 
-    ranked = [mode for mode in order if mode in supported]
-    leftovers = [mode for mode in supported if mode not in ranked]
-    return ranked + leftovers
+    # Strict mode: only keep modes explicitly declared in the order.
+    return [mode for mode in order if mode in supported]
 
 
 def select_progressive_index(delta: float, mode_count: int) -> int:

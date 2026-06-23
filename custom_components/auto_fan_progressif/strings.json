@@ -7,8 +7,23 @@
         "data": {
           "vtherm_entity_id": "Entité VTherm",
           "climate_entity_id": "Entité climate sous-jacente",
-          "fan_mode_order": "Ordre des fan_modes (séparés par des virgules)",
-          "auto_apply_on_hvac_mode": "Réappliquer aussi lors des changements HVAC/preset"
+          "fan_mode_order": "Ordre des fan_modes (séparés par des virgules)"
+        }
+      }
+    },
+    "error": {
+      "missing_entity": "Les deux entités sont obligatoires."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Auto Fan Progressif",
+        "description": "Ajuste les paramètres de l’auto-fan progressif.",
+        "data": {
+          "vtherm_entity_id": "Entité VTherm",
+          "climate_entity_id": "Entité climate sous-jacente",
+          "fan_mode_order": "Ordre des fan_modes (séparés par des virgules)"
         }
       }
     },

@@ -14,7 +14,6 @@ from homeassistant.core import HomeAssistant
 from vtherm_api import VThermAPI
 
 from .const import (
-    CONF_AUTO_APPLY_ON_HVAC_MODE,
     CONF_CLIMATE_ENTITY_ID,
     CONF_FAN_MODE_ORDER,
     CONF_VTHERM_ENTITY_ID,
@@ -47,7 +46,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     vtherm_entity_id = str(entry.data[CONF_VTHERM_ENTITY_ID])
     climate_entity_id = str(entry.data[CONF_CLIMATE_ENTITY_ID])
-    fan_mode_order = entry.data.get(CONF_FAN_MODE_ORDER, [])
+    fan_mode_order = entry.options.get(
+        CONF_FAN_MODE_ORDER,
+        entry.data.get(CONF_FAN_MODE_ORDER, []),
+    )
 
     _LOGGER.info(
         "Setting up %s for VTherm=%s climate=%s",
@@ -55,12 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         vtherm_entity_id,
         climate_entity_id,
     )
-    _LOGGER.debug(
-        "Config values for %s: fan_mode_order=%s auto_apply_on_hvac_mode=%s",
-        entry.entry_id,
-        fan_mode_order,
-        entry.data.get(CONF_AUTO_APPLY_ON_HVAC_MODE, True),
-    )
+    _LOGGER.debug("Config values for %s: fan_mode_order=%s", entry.entry_id, fan_mode_order)
 
     plugin = AutoFanProgressifPlugin(hass, climate_entity_id, fan_mode_order)
     vtherm = _get_climate_entity(hass, vtherm_entity_id)
@@ -71,10 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     plugin.link_to_vtherm(vtherm)
 
     hass.data[DOMAIN][entry.entry_id] = {
-        "entry": entry,
-        "api": api,
         "plugin": plugin,
-        CONF_AUTO_APPLY_ON_HVAC_MODE: bool(entry.data.get(CONF_AUTO_APPLY_ON_HVAC_MODE, True)),
     }
     return True
 
