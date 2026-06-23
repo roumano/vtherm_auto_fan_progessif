@@ -10,7 +10,6 @@ from typing import Iterable, Sequence
 
 from .const import DEFAULT_DELTA_THRESHOLDS, DEFAULT_FAN_MODE_ORDER
 
-
 @dataclass(frozen=True)
 class ProgressiveFanDecision:
     """Result returned by the progressive selector."""
@@ -84,6 +83,21 @@ def select_progressive_index(delta: float, mode_count: int) -> int:
         idx = mode_count - 1
 
     return max(0, min(idx, mode_count - 1))
+
+
+def delta_band(delta: float) -> str:
+    """Return a human-friendly band name for logs."""
+
+    abs_delta = abs(float(delta))
+    if abs_delta < DEFAULT_DELTA_THRESHOLDS[0]:
+        return "quietest"
+    if abs_delta < DEFAULT_DELTA_THRESHOLDS[1]:
+        return "low"
+    if abs_delta < DEFAULT_DELTA_THRESHOLDS[2]:
+        return "medium"
+    if abs_delta < DEFAULT_DELTA_THRESHOLDS[3]:
+        return "high"
+    return "max"
 
 
 def choose_fan_mode(
