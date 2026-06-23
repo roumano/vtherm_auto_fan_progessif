@@ -5,7 +5,8 @@ External integration for Versatile Thermostat using vtherm_api.
 
 from __future__ import annotations
 
-from collections.abc import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
