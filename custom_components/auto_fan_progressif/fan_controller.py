@@ -57,9 +57,11 @@ class AutoFanProgressifPlugin(PluginClimate):
         """Remove all listeners on unload."""
 
         _LOGGER.debug("Removing listeners for climate=%s", self._climate_entity_id)
-        if self._climate_listener_remove is not None:
-            self._climate_listener_remove()
-            self._climate_listener_remove = None
+        if self._remove_listener is not None:
+            self._remove_listener()
+            self._remove_listener = None
+
+        self._last_applied_mode = None
         super().remove_listeners()
 
     def handle_temperature_event(self, event: Event) -> None:

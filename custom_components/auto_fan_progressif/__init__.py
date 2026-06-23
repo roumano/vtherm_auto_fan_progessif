@@ -6,6 +6,7 @@ External integration for Versatile Thermostat using vtherm_api.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -24,6 +25,14 @@ from .fan_controller import AutoFanProgressifPlugin
 PLATFORMS: list[str] = []
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class AutoFanProgressifRuntimeData:
+    """Runtime data stored for a config entry."""
+
+    plugin: AutoFanProgressifPlugin
+
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
@@ -67,9 +76,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     plugin.link_to_vtherm(vtherm)
 
-    hass.data[DOMAIN][entry.entry_id] = {
-        "plugin": plugin,
-    }
+    runtime = AutoFanProgressifRuntimeData(plugin=plugin)
+    entry.runtime_data = runtime
+    hass.data[DOMAIN][entry.entry_id] = runtime
+
     return True
 
 
@@ -77,16 +87,19 @@ def _cleanup_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Remove runtime objects registered for an entry."""
 
     stored = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
-    plugin = stored.get("plugin") if stored else None
-    if plugin is not None:
-        _LOGGER.info("Cleaning up %s for entry=%s", DOMAIN, entry.entry_id)
-        plugin.remove_listeners()
+    runtime = stored or getattr(entry, "runtime_data", None)
+    if runtime is None:
+        return
 
-
+    _LOGGER.info("Cleaning up %s for entry=%s", DOMAIN, entry.entry_id)
+    runtime.plugin.remove_listeners()
+    entry.runtime_data = None  # type: ignore[assignment]
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload the config entry and remove listeners."""
 
     _cleanup_entry(hass, entry)
+    if not hass.data.get(DOMAIN):
+        hass.data.pop(DOMAIN, None)
     return True
 
 
@@ -95,6 +108,8 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
     _LOGGER.info("Removing %s for entry=%s", DOMAIN, entry.entry_id)
     _cleanup_entry(hass, entry)
+    if not hass.data.get(DOMAIN):
+        hass.data.pop(DOMAIN, None)
 
 
 def _get_climate_entity(hass: HomeAssistant, entity_id: str) -> Any | None:

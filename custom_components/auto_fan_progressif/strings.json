@@ -13,7 +13,8 @@
     },
     "error": {
       "missing_entity": "Les deux entités sont obligatoires."
-    }
+    },
+    "reconfigure_successful": "Configuration mise à jour avec succès"
   },
   "options": {
     "step": {
