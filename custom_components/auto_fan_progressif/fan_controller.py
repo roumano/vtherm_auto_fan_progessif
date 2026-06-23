@@ -180,35 +180,55 @@ class AutoFanProgressifPlugin(PluginClimate):
         if current_mode == selected_mode:
             _LOGGER.debug("No change for %s: already on fan mode %s", self._climate_entity_id, selected_mode)
             return selected_mode
-
         _LOGGER.info(
-            "Applying progressive auto-fan on %s: %s -> %s (delta=%.2f, band=%s)",
+            "Publishing progressive auto-fan state for %s: selected=%s (delta=%.2f, band=%s)",
             self._climate_entity_id,
-            current_mode,
             selected_mode,
             decision.delta,
             band,
         )
-        try:
-            await self._hass.services.async_call(
-                CLIMATE_DOMAIN,
-                "set_fan_mode",
-                {
-                    "entity_id": self._climate_entity_id,
-                    "fan_mode": selected_mode,
-                },
-                blocking=False,
-                context=context,
-            )
-        except Exception:
-            _LOGGER.exception(
-                "Failed to apply fan mode %s on %s",
-                selected_mode,
-                self._climate_entity_id,
-            )
-            raise
+        self._publish_vtherm_auto_fan_state(decision, selected_mode)
 
         return selected_mode
+
+    def _publish_vtherm_auto_fan_state(self, decision: Any, selected_mode: str) -> None:
+        """Update linked VTherm custom attributes without changing the underlying climate fan mode.
+
+        VTherm exposes these as custom attributes in the reference docs:
+        - auto_fan_mode
+        - current_auto_fan_mode
+        - auto_activated_fan_mode
+        - auto_deactivated_fan_mode
+        """
+        vtherm = self.linked_vtherm
+        if vtherm is None:
+            _LOGGER.debug("No linked VTherm available for %s", self._climate_entity_id)
+            return
+
+        # Keep the VTherm "auto fan" state expressed as VTherm attributes,
+        # while leaving the underlying climate in AUTO.
+        auto_fan_mode = _delta_to_auto_fan_mode(decision.delta)
+        deactivated_mode = _pick_deactivated_mode(decision.ordered_modes)
+
+        _LOGGER.debug(
+            "Updating VTherm auto-fan attrs for %s: auto_fan_mode=%s current_auto_fan_mode=%s "
+            "auto_activated_fan_mode=%s auto_deactivated_fan_mode=%s",
+            self._climate_entity_id,
+            auto_fan_mode,
+            auto_fan_mode,
+            selected_mode,
+            deactivated_mode,
+        )
+
+        setattr(vtherm, "auto_fan_mode", auto_fan_mode)
+        setattr(vtherm, "current_auto_fan_mode", auto_fan_mode)
+        setattr(vtherm, "auto_activated_fan_mode", selected_mode)
+        setattr(vtherm, "auto_deactivated_fan_mode", deactivated_mode)
+
+        if hasattr(vtherm, "update_custom_attributes"):
+            vtherm.update_custom_attributes()
+        if hasattr(vtherm, "async_write_ha_state"):
+            vtherm.async_write_ha_state()
 
     def _build_snapshot(self) -> FanModeSnapshot:
         state = self._hass.states.get(self._climate_entity_id)
@@ -234,3 +254,21 @@ def _as_float(value: Any) -> float | None:
         return None if value is None else float(value)
     except (TypeError, ValueError):
         return None
+
+def _delta_to_auto_fan_mode(delta: float) -> str:
+    """Map temperature delta to VTherm auto-fan attribute."""
+    if delta < 0.5:
+        return "auto_fan_low"
+    if delta < 1.0:
+        return "auto_fan_medium"
+    if delta < 2.0:
+        return "auto_fan_high"
+    return "auto_fan_turbo"
+
+
+def _pick_deactivated_mode(ordered_modes: list[str]) -> str:
+    """Pick a quiet fallback mode for VTherm attributes."""
+    for candidate in ("quiet", "mute", "auto", "low"):
+        if candidate in ordered_modes:
+            return candidate
+    return ordered_modes[0] if ordered_modes else "quiet"
