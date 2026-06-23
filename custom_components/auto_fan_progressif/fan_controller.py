@@ -36,6 +36,7 @@ class AutoFanProgressifPlugin(PluginClimate):
         self._climate_entity_id = climate_entity_id
         self._fan_mode_order = list(fan_mode_order or [])
         self._climate_listener_remove = None
+        self._remove_listener = None  # compatibility alias
         _LOGGER.debug(
             "AutoFanProgressifPlugin created for climate=%s preferred_order=%s",
             self._climate_entity_id,
@@ -82,6 +83,7 @@ class AutoFanProgressifPlugin(PluginClimate):
         if self._climate_listener_remove is not None:
             self._climate_listener_remove()
             self._climate_listener_remove = None
+            self._remove_listener = None
 
         _LOGGER.debug("Listening for state changes on climate entity=%s", self._climate_entity_id)
         self._climate_listener_remove = async_track_state_change_event(
@@ -89,6 +91,7 @@ class AutoFanProgressifPlugin(PluginClimate):
             [self._climate_entity_id],
             self._handle_target_climate_state_change,
         )
+        self._remove_listener = self._climate_listener_remove
 
     async def _handle_target_climate_state_change(self, event: Event) -> None:
         """Fallback when the underlying climate changes outside VTherm events."""
