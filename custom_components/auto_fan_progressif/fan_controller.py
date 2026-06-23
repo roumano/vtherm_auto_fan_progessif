@@ -220,15 +220,13 @@ class AutoFanProgressifPlugin(PluginClimate):
             deactivated_mode,
         )
 
-        setattr(vtherm, "auto_fan_mode", auto_fan_mode)
-        setattr(vtherm, "current_auto_fan_mode", auto_fan_mode)
-        setattr(vtherm, "auto_activated_fan_mode", selected_mode)
-        setattr(vtherm, "auto_deactivated_fan_mode", deactivated_mode)
-
-        if hasattr(vtherm, "update_custom_attributes"):
-            vtherm.update_custom_attributes()
-        if hasattr(vtherm, "async_write_ha_state"):
-            vtherm.async_write_ha_state()
+        _LOGGER.debug(
+            "Progressive auto-fan decision for %s: auto_fan_mode=%s activated=%s deactivated=%s",
+            self._climate_entity_id,
+            auto_fan_mode,
+            selected_mode,
+            deactivated_mode,
+        )
 
     def _build_snapshot(self) -> FanModeSnapshot:
         state = self._hass.states.get(self._climate_entity_id)
