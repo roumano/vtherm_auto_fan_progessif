@@ -111,6 +111,14 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     if not hass.data.get(DOMAIN):
         hass.data.pop(DOMAIN, None)
 
+async def async_remove_config_entry_device(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    device_entry,
+) -> bool:
+    """Opt-in support for deleting the device from the UI."""
+    return True
+
 
 def _get_climate_entity(hass: HomeAssistant, entity_id: str) -> Any | None:
     component = hass.data.get("climate")
